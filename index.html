@@ -74,7 +74,7 @@ function render(){const h=location.hash.slice(1),m=h.match(/^p-(\d+)$/);
  $('#app').innerHTML=nav()+(m?post(+m[1]):h==='blog'?blog():home())+`<footer><div class="w">© ${new Date().getFullYear()} ${esc(S.s.brand.replace(/^\S*\s/,''))} · Todos os direitos reservados${!edit?'<br><button class="ed" data-a="open">✏️ Editar</button>':''}</div></footer>`;
  if(location.hash==='#editar')rev=true;document.documentElement.style.setProperty('--ac',S.s.color);bar()}
 function bar(){const b=$('#bar');b.className=edit?'on':'';
- b.innerHTML=!can?'':edit?`<button class="btn o sm" data-a="edit">Sair da edição</button><button class="btn o sm" data-a="set">⚙ Configurações</button><button class="btn sm" data-a="pub">${dirty?'● ':''}Salvar e publicar</button>`:''}
+ b.innerHTML=!can?'':edit?`<button class="btn o sm" data-a="edit">Sair da edição</button><button class="btn o sm" data-a="set">⚙ Configurações</button><button class="btn o sm" data-a="disc">Desconectar</button><button class="btn sm" data-a="pub">${dirty?'● ':''}Salvar e publicar</button>`:''}
 function mark(){if(!dirty){dirty=true;bar()}}
 function modal(h){$('#modal').innerHTML=h?`<div class="mb"><div class="mc">${h}</div></div>`:''}
 function openPost(id){const p=S.p.find(x=>x.id===id)||{id:0,t:'',c:'Dicas',d:new Date().toISOString().slice(0,10),e:'',b:'',pub:true,img:''};curImg=p.img||'';
@@ -101,22 +101,22 @@ async function publish(){toast('Publicando…');
  c.querySelector('#data').textContent=JSON.stringify(S).replace(/</g,'\\u003c');
  await put(GH.file,enc.encode('<!DOCTYPE html>\n'+c.outerHTML),'Atualização pelo painel do site');dirty=false;bar();toast('Publicado! O site atualiza em cerca de 1 minuto.')}
  catch(e){toast('Não foi possível publicar: '+e.message)}}
-function openLogin(){const has=!!localStorage.getItem('ghcfg');
+function openLogin(){const st=localStorage.getItem('ghcfg'),has=false;if(st){try{GH=JSON.parse(st);edit=true;can=true;render();return}catch(e){localStorage.removeItem('ghcfg')}}
  modal(has?`<h3>🔒 Área do administrador</h3><label>Senha<input id="lp" type="password" autocomplete="current-password"></label><div id="le" class="meta" style="color:#d33"></div><div class="ac"><button class="btn o" data-a="closem">Cancelar</button><button class="btn" data-a="login">Entrar</button></div><p class="meta"><a href="#" data-a="reset" style="text-decoration:underline">Esqueci a senha / trocar token</a></p>`
- :`<h3>🔒 Conectar ao GitHub</h3><p class="meta">Configuração feita uma única vez neste aparelho. O token fica guardado só no seu navegador, protegido pela senha que você criar.</p><label>Repositório (usuário/nome)<input id="gr" value="marcos15camposaraujo-cmyk/ultrabet"></label><div class="r2"><label>Branch<input id="gb" value="main"></label><label>Arquivo do site<input id="gf" value="index.html"></label></div><label>Token do GitHub<input id="gt" type="password" placeholder="github_pat_…"></label><label>Crie uma senha de acesso (mín. 8 caracteres)<input id="gp" type="password" autocomplete="new-password"></label><div id="le" class="meta" style="color:#d33"></div><div class="ac"><button class="btn o" data-a="closem">Cancelar</button><button class="btn" data-a="setup">Salvar e entrar</button></div>`)}
+ :`<h3>🔒 Conectar ao GitHub</h3><p class="meta">Configuração feita uma única vez neste aparelho. O token fica guardado só no seu navegador, neste aparelho. Nas próximas vezes, o botão Editar entra direto.</p><label>Repositório (usuário/nome)<input id="gr" value="marcos15camposaraujo-cmyk/ultrabet"></label><div class="r2"><label>Branch<input id="gb" value="main"></label><label>Arquivo do site<input id="gf" value="index.html"></label></div><label>Token do GitHub<input id="gt" type="password" placeholder="github_pat_…"></label><div id="le" class="meta" style="color:#d33"></div><div class="ac"><button class="btn o" data-a="closem">Cancelar</button><button class="btn" data-a="setup">Salvar e entrar</button></div>`)}
 async function doLogin(){const pw=$('#lp').value;$('#le').textContent='Verificando…';try{GH=await unlock(pw)}catch(e){$('#le').textContent='Senha incorreta.';return}modal('');edit=true;can=true;render()}
-async function doSetup(){const v=i=>$('#'+i).value.trim(),er=m=>$('#le').textContent=m,pw=$('#gp').value,
+async function doSetup(){const v=i=>$('#'+i).value.trim(),er=m=>$('#le').textContent=m,
  cfg={repo:v('gr').replace(/^https?:\/\/github\.com\//,'').replace(/\.git$/,'').replace(/\/$/,''),br:v('gb')||'main',file:v('gf')||'index.html',token:v('gt')};
  if(!/^[^\/\s]+\/[^\/\s]+$/.test(cfg.repo))return er('Informe o repositório no formato usuario/nome.');
- if(!cfg.token)return er('Cole o token do GitHub.');if(pw.length<8)return er('A senha precisa ter pelo menos 8 caracteres.');
+ if(!cfg.token)return er('Cole o token do GitHub.');
  er('Verificando…');GH=cfg;try{await api(cfg.file)}catch(e){GH=null;return er(e.message)}
- await lock(pw,cfg);modal('');edit=true;can=true;render();toast('Conectado ao GitHub!')}
+ localStorage.setItem('ghcfg',JSON.stringify(cfg));modal('');edit=true;can=true;render();toast('Conectado ao GitHub!')}
 document.addEventListener('click',e=>{
  const g=e.target.closest('[data-go]');if(g){e.preventDefault();const go=()=>(document.getElementById(g.dataset.go)||document.body).scrollIntoView({behavior:'smooth'});if(location.hash.length>1){location.hash='';setTimeout(go,100)}else go();return}
  const el=e.target.closest('[data-a]');if(!el)return;const a=el.dataset.a,id=+el.dataset.id,V=i=>document.getElementById(i).value;
  const two=()=>{if(!el.dataset.c){el.dataset.c=1;el.textContent='Confirmar?';return false}return true};
  if(a==='open')openLogin();else if(a==='login')doLogin();else if(a==='setup')doSetup();
- else if(a==='reset'){e.preventDefault();localStorage.removeItem('ghcfg');openLogin()}
+ else if(a==='disc'){localStorage.removeItem('ghcfg');edit=false;can=false;GH=null;dirty=false;render();toast('Token removido deste aparelho.')}
  else if(a==='edit'){if(dirty&&!el.dataset.c){el.dataset.c=1;el.textContent='Sair sem publicar?';return}edit=false;can=false;GH=null;dirty=false;render()}
  else if(a==='addsv'){S.sv.push({icon:'✨',title:'Novo serviço',desc:'Descreva o serviço aqui.'});mark();render()}
  else if(a==='delsv'){if(two()){S.sv.splice(+el.dataset.i,1);mark();render()}}
